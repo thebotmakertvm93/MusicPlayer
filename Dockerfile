@@ -1,25 +1,31 @@
+# 1. Use the modern, long-term supported Debian Bookworm base image (Avoids 404 apt errors)
 FROM python:3.10-slim-bookworm
 
-# Updating Packages using stable modern mirrors
+# 2. Prevent Python from writing .pyc files and force unbuffered logging for real-time Render logs
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# 3. Combine apt commands, install build dependencies for tgcalls C++ compilation, and clean up to save space
 RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends git curl ffmpeg build-essential python3-dev && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    ffmpeg \
+    build-essential \
+    python3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copying Requirements
-COPY requirements.txt /requirements.txt
+WORKDIR /app
 
-# Installing Requirements
-RUN cd /
-RUN pip3 install --upgrade pip
-RUN pip3 install -U -r requirements.txt
+# 4. Upgrade pip and core packaging tools first to resolve modern PyPI wheel structures cleanly
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# Setting up working directory
-RUN mkdir /MusicPlayer
-WORKDIR /MusicPlayer
+# 5. Copy and install Python packages using the layer cache strategy
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Preparing for the Startup
-COPY startup.sh /startup.sh
-RUN chmod +x /startup.sh
+# 6. Copy the rest of the application files
+COPY . .
 
-# Running Music Player Bot
-CMD ["/bin/bash", "/startup.sh"]
+# 7. Default start command (Render will automatically pass the network port variable)
+CMD ["python", "main.py"]

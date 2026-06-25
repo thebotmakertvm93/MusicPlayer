@@ -1,8 +1,9 @@
-FROM python:3.9-slim-buster
+FROM python:3.10-slim-bookworm
 
-# Updating Packages
-RUN apt update && apt upgrade -y
-RUN apt install git curl python3-pip ffmpeg -y
+# Updating Packages using stable modern mirrors
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends git curl ffmpeg build-essential python3-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copying Requirements
 COPY requirements.txt /requirements.txt
